@@ -31,17 +31,22 @@ class WebSearchTool:
             provider: Search provider ("tavily" or "brave")
             max_results: Maximum number of results to return
         """
-        self.provider = provider
-        self.max_results = max_results
         self.logger = logging.getLogger("tools.web_search")
+        self.max_results = max_results
+
+        # Normalize and validate provider - default to tavily for unknown providers
+        valid_providers = ["tavily", "brave"]
+        if provider not in valid_providers:
+            self.logger.warning(f"Unknown provider '{provider}'. Defaulting to 'tavily'.")
+            provider = "tavily"
+        
+        self.provider = provider
 
         # Get API key from environment
         if provider == "tavily":
             self.api_key = os.getenv("TAVILY_API_KEY")
         elif provider == "brave":
             self.api_key = os.getenv("BRAVE_API_KEY")
-        else:
-            raise ValueError(f"Unknown provider: {provider}")
 
         if not self.api_key:
             self.logger.warning(f"No API key found for {provider}. Search will return empty results.")
@@ -212,33 +217,42 @@ class WebSearchTool:
 
 
 # Synchronous wrapper for use with AutoGen tools
-def web_search(query: str, provider: str = "tavily", max_results: int = 5) -> str:
+def web_search(query: str, max_results: int = 5) -> str:
     """
-    Synchronous wrapper for web search (for AutoGen tool integration).
+    Search the web for information on a given topic.
     
     Args:
-        query: Search query
-        provider: "tavily" or "brave"
-        max_results: Maximum results to return
+        query: The search query to look up (e.g., "user-centered design principles")
+        max_results: Maximum number of results to return (default: 5)
         
     Returns:
-        Formatted string with search results
+        Formatted string with search results including titles, URLs, and snippets
     """
-    tool = WebSearchTool(provider=provider, max_results=max_results)
-    results = asyncio.run(tool.search(query))
+    # Auto-detect provider based on available API keys
+    provider = "tavily"  # Default
+    if os.getenv("TAVILY_API_KEY"):
+        provider = "tavily"
+    elif os.getenv("BRAVE_API_KEY"):
+        provider = "brave"
     
-    if not results:
-        return "No search results found."
-    
-    # Format results as readable text
-    output = f"Found {len(results)} web search results for '{query}':\n\n"
-    
-    for i, result in enumerate(results, 1):
-        output += f"{i}. {result['title']}\n"
-        output += f"   URL: {result['url']}\n"
-        output += f"   {result['snippet']}\n"
-        if result.get('published_date'):
-            output += f"   Published: {result['published_date']}\n"
-        output += "\n"
-    
-    return output
+    try:
+        tool = WebSearchTool(provider=provider, max_results=max_results)
+        results = asyncio.run(tool.search(query))
+        
+        if not results:
+            return f"No search results found for '{query}'. Try adjusting your search terms."
+        
+        # Format results as readable text
+        output = f"Found {len(results)} web search results for '{query}':\n\n"
+        
+        for i, result in enumerate(results, 1):
+            output += f"{i}. {result['title']}\n"
+            output += f"   URL: {result['url']}\n"
+            output += f"   {result['snippet']}\n"
+            if result.get('published_date'):
+                output += f"   Published: {result['published_date']}\n"
+            output += "\n"
+        
+        return output
+    except Exception as e:
+        return f"Search error occurred: {str(e)}. Please try again with different search terms."

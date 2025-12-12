@@ -11,6 +11,7 @@ from typing import List, Dict, Any, Optional
 import os
 import logging
 import asyncio
+from itertools import islice
 
 
 class PaperSearchTool:
@@ -216,8 +217,10 @@ class PaperSearchTool:
             Filtered and formatted list of papers
         """
         papers = []
+        max_to_fetch = 10  # Hard limit to prevent excessive API calls
         
-        for paper in results:
+        # Use islice to limit iteration BEFORE the library fetches more pages
+        for paper in islice(results, max_to_fetch):
             # Skip papers without basic metadata
             if not paper or not hasattr(paper, 'title'):
                 continue

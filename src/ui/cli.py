@@ -1,6 +1,13 @@
 """
 Command Line Interface
 Interactive CLI for the multi-agent research system.
+
+Features:
+- Interactive query input
+- Agent trace display
+- Citation/source display  
+- Safety event communication (blocked/sanitized)
+- Command support (help, quit, clear, stats)
 """
 
 import sys
@@ -10,10 +17,10 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-import asyncio
-from typing import Dict, Any
+from typing import Dict, Any, List
 import yaml
 import logging
+from datetime import datetime
 from dotenv import load_dotenv
 
 from src.autogen_orchestrator import AutoGenOrchestrator
@@ -21,17 +28,15 @@ from src.autogen_orchestrator import AutoGenOrchestrator
 # Load environment variables
 load_dotenv()
 
+
 class CLI:
     """
     Command-line interface for the research assistant.
-
-    TODO: YOUR CODE HERE
-    - Implement interactive prompt loop
-    - Display agent traces clearly
-    - Show citations and sources
-    - Indicate safety events (blocked/sanitized)
-    - Handle user commands (help, quit, clear, etc.)
-    - Format output nicely
+    
+    Displays:
+    - Agent traces showing workflow
+    - Citations and sources
+    - Safety events (blocked/sanitized queries)
     """
 
     def __init__(self, config_path: str = "config.yaml"):
@@ -60,6 +65,9 @@ class CLI:
 
         self.running = True
         self.query_count = 0
+        self.safety_events_count = 0
+        self.blocked_queries_count = 0
+        self.all_safety_events: List[Dict[str, Any]] = []
 
     def _setup_logging(self):
         """Setup logging configuration."""
@@ -75,23 +83,14 @@ class CLI:
             format=log_format
         )
 
-    async def run(self):
-        """
-        Main CLI loop.
-
-        TODO: YOUR CODE HERE
-        - Implement interactive loop
-        - Handle user input
-        - Process queries through orchestrator
-        - Display results
-        - Handle errors gracefully
-        """
+    def run(self):
+        """Main CLI loop (synchronous)."""
         self._print_welcome()
 
         while self.running:
             try:
                 # Get user input
-                query = input("\nEnter your research query (or 'help' for commands): ").strip()
+                query = input("\n📝 Enter your research query (or 'help' for commands): ").strip()
 
                 if not query:
                     continue
@@ -109,54 +108,77 @@ class CLI:
                 elif query.lower() == 'stats':
                     self._print_stats()
                     continue
+                elif query.lower() == 'safety':
+                    self._print_safety_log()
+                    continue
 
                 # Process query
                 print("\n" + "=" * 70)
-                print("Processing your query...")
+                print("🔄 Processing your query through agents...")
                 print("=" * 70)
                 
                 try:
-                    # Process through orchestrator (synchronous call, not async)
+                    # Process through orchestrator
                     result = self.orchestrator.process_query(query)
                     self.query_count += 1
+                    
+                    # Track safety events
+                    safety_info = result.get("safety", {})
+                    events = safety_info.get("events", [])
+                    if events:
+                        self.all_safety_events.extend(events)
+                        self.safety_events_count = len(self.all_safety_events)
+                    
+                    # Check if blocked
+                    input_check = safety_info.get("input_check", {})
+                    if input_check and not input_check.get("safe", True):
+                        self.blocked_queries_count += 1
                     
                     # Display result
                     self._display_result(result)
                     
                 except Exception as e:
-                    print(f"\nError processing query: {e}")
+                    print(f"\n❌ Error processing query: {e}")
                     logging.exception("Error processing query")
 
             except KeyboardInterrupt:
-                print("\n\nInterrupted by user.")
+                print("\n\n⚠️ Interrupted by user.")
                 self._print_goodbye()
                 break
             except Exception as e:
-                print(f"\nError: {e}")
+                print(f"\n❌ Error: {e}")
                 logging.exception("Error in CLI loop")
 
     def _print_welcome(self):
         """Print welcome message."""
+        print("\n" + "=" * 70)
+        print(f"  🤖 {self.config['system']['name']}")
+        print(f"  📚 Topic: {self.config['system']['topic']}")
         print("=" * 70)
-        print(f"  {self.config['system']['name']}")
-        print(f"  Topic: {self.config['system']['topic']}")
-        print("=" * 70)
-        print("\nWelcome! Ask me anything about your research topic.")
-        print("Type 'help' for available commands, or 'quit' to exit.\n")
+        print("\n✨ Welcome! Ask me anything about your research topic.")
+        print("📋 Type 'help' for available commands, or 'quit' to exit.")
+        print("🛡️ Safety guardrails are active to ensure appropriate content.\n")
 
     def _print_help(self):
         """Print help message."""
-        print("\nAvailable commands:")
+        print("\n" + "-" * 50)
+        print("📋 AVAILABLE COMMANDS")
+        print("-" * 50)
         print("  help    - Show this help message")
         print("  clear   - Clear the screen")
         print("  stats   - Show system statistics")
+        print("  safety  - Show safety event log")
         print("  quit    - Exit the application")
-        print("\nOr enter a research query to get started!")
+        print("-" * 50)
+        print("\n💡 Or enter a research query to get started!")
 
     def _print_goodbye(self):
         """Print goodbye message."""
-        print("\nThank you for using the Multi-Agent Research Assistant!")
-        print("Goodbye!\n")
+        print("\n" + "=" * 70)
+        print("👋 Thank you for using the Multi-Agent Research Assistant!")
+        print(f"   📊 Queries processed: {self.query_count}")
+        print(f"   🛡️ Safety events: {self.safety_events_count}")
+        print("=" * 70 + "\n")
 
     def _clear_screen(self):
         """Clear the terminal screen."""
@@ -165,36 +187,93 @@ class CLI:
 
     def _print_stats(self):
         """Print system statistics."""
-        print("\nSystem Statistics:")
-        print(f"  Queries processed: {self.query_count}")
-        print(f"  System: {self.config.get('system', {}).get('name', 'Unknown')}")
-        print(f"  Topic: {self.config.get('system', {}).get('topic', 'Unknown')}")
-        print(f"  Model: {self.config.get('models', {}).get('default', {}).get('name', 'Unknown')}")
+        print("\n" + "-" * 50)
+        print("📊 SYSTEM STATISTICS")
+        print("-" * 50)
+        print(f"  • Queries processed:  {self.query_count}")
+        print(f"  • Queries blocked:    {self.blocked_queries_count}")
+        print(f"  • Safety events:      {self.safety_events_count}")
+        print("-" * 50)
+        print(f"  • System:  {self.config.get('system', {}).get('name', 'Unknown')}")
+        print(f"  • Topic:   {self.config.get('system', {}).get('topic', 'Unknown')}")
+        print(f"  • Model:   {self.config.get('models', {}).get('default', {}).get('name', 'Unknown')}")
+        print("-" * 50)
+
+    def _print_safety_log(self):
+        """Print all safety events."""
+        print("\n" + "-" * 50)
+        print("🛡️ SAFETY EVENT LOG")
+        print("-" * 50)
+        
+        if not self.all_safety_events:
+            print("  ✅ No safety events recorded in this session.")
+        else:
+            for i, event in enumerate(self.all_safety_events, 1):
+                event_type = event.get("type", "unknown")
+                timestamp = event.get("timestamp", "")
+                details = event.get("details", {})
+                
+                # Determine icon
+                if event_type == "input_blocked":
+                    icon = "⛔"
+                elif event_type == "output_sanitized":
+                    icon = "✂️"
+                elif "validated" in event_type:
+                    icon = "✅"
+                else:
+                    icon = "ℹ️"
+                
+                print(f"\n  {icon} Event {i}: {event_type}")
+                if timestamp:
+                    print(f"     Time: {timestamp}")
+                
+                violations = details.get("violations", [])
+                if violations:
+                    for v in violations:
+                        print(f"     • {v.get('category', 'N/A')}: {v.get('reason', 'Unknown')}")
+        
+        print("-" * 50)
 
     def _display_result(self, result: Dict[str, Any]):
-        """Display query result with formatting."""
+        """Display query result with formatting and safety info."""
+        
+        # Get safety information
+        safety_info = result.get("safety", {})
+        input_check = safety_info.get("input_check", {})
+        output_check = safety_info.get("output_check", {})
+        
+        # Check if query was blocked
+        if input_check and not input_check.get("safe", True):
+            self._display_blocked_query(result, input_check)
+            return
+        
+        # Display main response
         print("\n" + "=" * 70)
-        print("RESPONSE")
+        print("📄 RESPONSE")
         print("=" * 70)
-
+        
         # Check for errors
-        if "error" in result:
+        if "error" in result and result.get("metadata", {}).get("error"):
             print(f"\n❌ Error: {result['error']}")
             return
-
+        
         # Display response
         response = result.get("response", "")
         print(f"\n{response}\n")
-
-        # Extract and display citations from conversation
+        
+        # Check if output was sanitized
+        if output_check and not output_check.get("safe", True):
+            self._display_sanitization_warning(output_check)
+        
+        # Display citations
         citations = self._extract_citations(result)
         if citations:
             print("\n" + "-" * 70)
-            print("📚 CITATIONS")
+            print("📚 CITATIONS & SOURCES")
             print("-" * 70)
             for i, citation in enumerate(citations, 1):
-                print(f"[{i}] {citation}")
-
+                print(f"  [{i}] {citation}")
+        
         # Display metadata
         metadata = result.get("metadata", {})
         if metadata:
@@ -202,56 +281,150 @@ class CLI:
             print("📊 METADATA")
             print("-" * 70)
             print(f"  • Messages exchanged: {metadata.get('num_messages', 0)}")
-            print(f"  • Sources gathered: {metadata.get('num_sources', 0)}")
-            print(f"  • Agents involved: {', '.join(metadata.get('agents_involved', []))}")
-
-        # Display conversation summary if verbose mode
+            print(f"  • Sources gathered:   {metadata.get('num_sources', 0)}")
+            agents = metadata.get('agents_involved', [])
+            print(f"  • Agents involved:    {', '.join(agents) if agents else 'N/A'}")
+        
+        # Display agent traces
         if self._should_show_traces():
-            self._display_conversation_summary(result.get("conversation_history", []))
-
+            self._display_agent_traces(result.get("conversation_history", []))
+        
+        # Display safety summary
+        self._display_safety_summary(safety_info)
+        
         print("=" * 70 + "\n")
+    
+    def _display_blocked_query(self, result: Dict[str, Any], input_check: Dict[str, Any]):
+        """Display blocked query message."""
+        print("\n" + "=" * 70)
+        print("⛔ QUERY BLOCKED BY SAFETY GUARDRAILS")
+        print("=" * 70)
+        
+        violations = input_check.get("violations", [])
+        print("\n🚫 Your query was blocked for the following reasons:\n")
+        
+        for i, v in enumerate(violations, 1):
+            category = v.get("category", "safety").upper()
+            reason = v.get("reason", "Unknown violation")
+            print(f"  {i}. [{category}] {reason}")
+        
+        print("\n" + "-" * 70)
+        print("💡 Please rephrase your query to avoid:")
+        print("   • Harmful or offensive content")
+        print("   • Prompt injection attempts")
+        print("   • Off-topic requests")
+        print("-" * 70)
+        
+        # Show the response message
+        response = result.get("response", "Query blocked due to safety policies.")
+        print(f"\n📝 {response}")
+        
+        print("=" * 70 + "\n")
+    
+    def _display_sanitization_warning(self, output_check: Dict[str, Any]):
+        """Display warning about sanitized output."""
+        print("\n" + "-" * 70)
+        print("⚠️ OUTPUT SANITIZED BY SAFETY GUARDRAILS")
+        print("-" * 70)
+        
+        violations = output_check.get("violations", [])
+        print("The response was modified for the following reasons:\n")
+        
+        for v in violations:
+            category = v.get("category", "safety").upper()
+            reason = v.get("reason", "Unknown modification")
+            print(f"  ✂️ [{category}] {reason}")
+        
+        print("-" * 70)
+    
+    def _display_safety_summary(self, safety_info: Dict[str, Any]):
+        """Display a brief safety summary."""
+        events = safety_info.get("events", [])
+        
+        if events:
+            print("\n" + "-" * 70)
+            print("🛡️ SAFETY CHECK SUMMARY")
+            print("-" * 70)
+            
+            for event in events:
+                event_type = event.get("type", "unknown")
+                
+                if event_type == "input_validated":
+                    print("  ✅ Input: Validated")
+                elif event_type == "input_blocked":
+                    print("  ⛔ Input: Blocked")
+                elif event_type == "output_validated":
+                    print("  ✅ Output: Validated")
+                elif event_type == "output_sanitized":
+                    print("  ✂️ Output: Sanitized")
+                else:
+                    print(f"  ℹ️ {event_type}")
     
     def _extract_citations(self, result: Dict[str, Any]) -> list:
         """Extract citations/URLs from conversation history."""
         citations = []
+        import re
         
         for msg in result.get("conversation_history", []):
             content = msg.get("content", "")
             
-            # Find URLs in content
-            import re
+            # Handle case where content might be a list or other type
+            if isinstance(content, list):
+                content = " ".join(str(item) for item in content)
+            elif not isinstance(content, str):
+                content = str(content)
+            
+            # Find URLs
             urls = re.findall(r'https?://[^\s<>"{}|\\^`\[\]]+', content)
+            
+            # Find [Source: ...] patterns
+            sources = re.findall(r'\[Source: ([^\]]+)\]', content)
             
             for url in urls:
                 if url not in citations:
                     citations.append(url)
+            
+            for source in sources:
+                if source not in citations:
+                    citations.append(source)
         
-        return citations[:10]  # Limit to top 10
+        return citations[:15]  # Limit to 15
 
     def _should_show_traces(self) -> bool:
         """Check if agent traces should be displayed."""
-        # Check config for verbose mode
         return self.config.get("ui", {}).get("verbose", False)
 
-    def _display_conversation_summary(self, conversation_history: list):
-        """Display a summary of the agent conversation."""
+    def _display_agent_traces(self, conversation_history: list):
+        """Display agent workflow traces."""
         if not conversation_history:
             return
-            
+        
         print("\n" + "-" * 70)
-        print("🔍 CONVERSATION SUMMARY")
+        print("🔍 AGENT WORKFLOW TRACES")
         print("-" * 70)
+        
+        # Agent color/emoji mapping
+        agent_icons = {
+            "Planner": "🟦",
+            "Researcher": "🟩",
+            "Writer": "🟨",
+            "Critic": "🟪",
+            "user": "⬜"
+        }
         
         for i, msg in enumerate(conversation_history, 1):
             agent = msg.get("source", "Unknown")
             content = msg.get("content", "")
             
+            icon = agent_icons.get(agent, "⬛")
+            
             # Truncate long content
-            preview = content[:150] + "..." if len(content) > 150 else content
+            preview = content[:200] + "..." if len(content) > 200 else content
             preview = preview.replace("\n", " ")
             
-            print(f"\n{i}. {agent}:")
-            print(f"   {preview}")
+            print(f"\n  Step {i}: {icon} {agent}")
+            print(f"  {'-' * 40}")
+            print(f"  {preview}")
 
 
 def main():
@@ -269,9 +442,9 @@ def main():
 
     args = parser.parse_args()
 
-    # Run CLI
+    # Run CLI (synchronous - process_query handles its own async internally)
     cli = CLI(config_path=args.config)
-    asyncio.run(cli.run())
+    cli.run()
 
 
 if __name__ == "__main__":

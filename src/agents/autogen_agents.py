@@ -44,25 +44,40 @@ def create_model_client(config: Dict[str, Any]) -> OpenAIChatCompletionClient:
             model=model_config.get("name", "llama-3.3-70b-versatile"),
             api_key=api_key,
             base_url="https://api.groq.com/openai/v1",
-            model_capabilities={
-                "json_output": False,
+            model_info={
                 "vision": False,
                 "function_calling": True,
+                "json_output": True,
+                "family": ModelFamily.UNKNOWN,
+                "structured_output": False,
             }
         )
     
-    # OpenAI configuration
+    # OpenAI configuration (including custom endpoints like vllm.salt-lab.org)
     elif provider == "openai":
         api_key = os.getenv("OPENAI_API_KEY")
         base_url = os.getenv("OPENAI_BASE_URL")
         if not api_key:
             raise ValueError("OPENAI_API_KEY not found in environment")
         
-        return OpenAIChatCompletionClient(
-            model=model_config.get("name", "gpt-4o-mini"),
-            api_key=api_key,
-            base_url=base_url,
-        )
+        # For custom endpoints, we need to provide model_info
+        client_kwargs = {
+            "model": model_config.get("name", "gpt-4o-mini"),
+            "api_key": api_key,
+        }
+        
+        if base_url:
+            client_kwargs["base_url"] = base_url
+            # Custom endpoints need explicit model_info
+            client_kwargs["model_info"] = {
+                "vision": False,
+                "function_calling": True,
+                "json_output": True,
+                "family": ModelFamily.UNKNOWN,
+                "structured_output": False,
+            }
+        
+        return OpenAIChatCompletionClient(**client_kwargs)
 
     elif provider == "vllm":
         api_key = os.getenv("OPENAI_API_KEY")
@@ -151,12 +166,18 @@ def create_researcher_agent(config: Dict[str, Any], model_client: OpenAIChatComp
     # Load system prompt from config or use default
     default_system_message = """You are a Research Assistant. Your job is to gather high-quality information from academic papers and web sources.
 
-You have access to tools for web search and paper search. When conducting research:
-1. Use both web search and paper search for comprehensive coverage
-2. Look for recent, high-quality sources
-3. Extract key findings, quotes, and data
-4. Note all source URLs and citations
-5. Gather evidence that directly addresses the research query"""
+You have access to two tools: web_search and paper_search. The system will handle calling these tools for you - just specify which tool you want to use with the required parameters.
+
+When conducting research:
+1. Use both web_search and paper_search for comprehensive coverage
+2. For web_search: provide a query string to search for
+3. For paper_search: provide a query string and optionally year_from to filter recent papers
+4. Look for recent, high-quality sources
+5. Extract key findings, quotes, and data
+6. Note all source URLs and citations
+7. Gather evidence that directly addresses the research query
+
+Do NOT format tool calls as markdown links or any special syntax - the system handles tool execution automatically."""
 
     # Use custom prompt from config if available
     custom_prompt = agent_config.get("system_prompt", "")
@@ -165,23 +186,47 @@ You have access to tools for web search and paper search. When conducting resear
     else:
         system_message = default_system_message
 
-    # Wrap tools in FunctionTool
-    web_search_tool = FunctionTool(
-        web_search,
-        description="Search the web for articles, blog posts, and general information. Returns formatted search results with titles, URLs, and snippets."
-    )
+    # Check if tools are enabled in config
+    tools_config = config.get("tools", {})
+    web_search_enabled = tools_config.get("web_search", {}).get("enabled", True)
+    paper_search_enabled = tools_config.get("paper_search", {}).get("enabled", True)
     
-    paper_search_tool = FunctionTool(
-        paper_search,
-        description="Search academic papers on Semantic Scholar. Returns papers with authors, abstracts, citation counts, and URLs. Use year_from parameter to filter recent papers."
-    )
+    tools_list = []
+    
+    if web_search_enabled:
+        # Wrap tools in FunctionTool
+        web_search_tool = FunctionTool(
+            web_search,
+            description="Search the web for articles, blog posts, and general information. Returns formatted search results with titles, URLs, and snippets."
+        )
+        tools_list.append(web_search_tool)
+    
+    if paper_search_enabled:
+        paper_search_tool = FunctionTool(
+            paper_search,
+            description="Search academic papers on Semantic Scholar. Returns papers with authors, abstracts, citation counts, and URLs. Use year_from parameter to filter recent papers."
+        )
+        tools_list.append(paper_search_tool)
+    
+    # Update system message if no tools available
+    if not tools_list:
+        system_message = """You are a Research Assistant. Your job is to provide high-quality information based on your knowledge.
 
-    # Create the researcher with tool access
+Since external search tools are currently unavailable, please:
+1. Draw on your training knowledge about the topic
+2. Cite well-known sources, papers, and experts in the field
+3. Provide accurate, up-to-date information
+4. Acknowledge any limitations in your knowledge
+5. Structure your response with clear findings and citations
+
+Focus on providing valuable, research-quality information."""
+
+    # Create the researcher with or without tool access
     researcher = AssistantAgent(
         name="Researcher",
         model_client=model_client,
-        tools=[web_search_tool, paper_search_tool],
-        description="Gathers evidence from web and academic sources using search tools",
+        tools=tools_list if tools_list else None,
+        description="Gathers evidence from web and academic sources using search tools" if tools_list else "Provides research information from knowledge base",
         system_message=system_message,
     )
     
@@ -209,13 +254,22 @@ def create_writer_agent(config: Dict[str, Any], model_client: OpenAIChatCompleti
 When writing:
 1. Start with an overview/introduction
 2. Present findings in a logical structure
-3. Cite sources inline using [Source: Title/Author]
+3. Use APA-style inline citations: (Author, Year) or (Organization, Year)
 4. Synthesize information from multiple sources
 5. Avoid copying text directly - paraphrase and synthesize
-6. Include a references section at the end
+6. Include a References section at the end in APA format
 7. Ensure the response directly answers the original query
 
-Format your response professionally with clear headings, paragraphs, in-text citations, and a References section at the end."""
+APA Citation Format Examples:
+- In text: "User-centered design places users at the forefront of the design process (Norman, 1988)."
+- Multiple authors: "Research shows iterative testing is crucial (Nielsen & Molich, 1990)."
+- Organization: "Accessibility is essential for inclusive design (W3C, 2023)."
+
+References section format:
+- Norman, D. A. (1988). The design of everyday things. Basic Books.
+- Nielsen, J. (2023). Usability 101. Nielsen Norman Group. https://www.nngroup.com/articles/usability-101
+
+Format your response professionally with clear headings, paragraphs, APA in-text citations, and an APA-formatted References section at the end."""
 
     # Use custom prompt from config if available
     custom_prompt = agent_config.get("system_prompt", "")
