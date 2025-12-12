@@ -102,33 +102,49 @@ The following screenshots demonstrate the system:
 | 5. **Guardrail Block** | Example of blocked malicious query |
 | 6. **Safety Log** | Safety events showing violations detected |
 
+### Demo Query Used
+
+The following query was used to demonstrate the complete workflow:
+
+> **"What are the key principles of user-centered design in HCI?"**
+
+This query triggers the full multi-agent pipeline: Planner creates a research strategy, Researcher gathers sources from web and academic papers, Writer synthesizes findings with APA citations, and Critic evaluates the response quality.
+
+---
+
 ### Web Interface
 
 ![Streamlit Web UI](samples/demo_screenshot.png)
 
-*The Streamlit web interface with query input and system information.*
+*The Streamlit home page where users enter research queries. The sidebar shows settings for agent traces, safety log, and LLM-as-a-Judge evaluation. Example queries are provided for quick testing.*
 
 ### Research Response with Metrics
 
 ![Response Example](samples/response_example.png)
 
-*Complete research response showing Sources, Tool Calls, and Agents metrics.*
+*After processing the demo query, the system displays the synthesized response with:*
+- *📚 **Sources**: Number of citations collected by the Researcher*
+- *🔧 **Tool Calls**: Number of web/paper search API calls made*
+- *👥 **Agents**: The 4 agents involved (Planner, Researcher, Writer, Critic)*
 
 ### Agent Processing Log
 
 ![Agent Traces - Collapsed](samples/agent_traces_1.png)
 
-*Agent Processing Log showing the step-by-step workflow.*
+*The Agent Processing Log shows each step of the multi-agent workflow. Each agent's contribution is listed with a preview of their output. Users can click to expand any step for full details.*
 
 ![Agent Traces - Expanded](samples/agent_traces_expanded.png)
 
-*Expanded view showing detailed agent output.*
+*Expanded view of the Researcher agent's output, showing the actual search results and sources gathered. This transparency allows users to verify the evidence used in the final response.*
 
 ### LLM-as-a-Judge Evaluation
 
 ![Judge Evaluation](samples/judge_evaluation.png)
 
-*Multi-perspective evaluation with Academic Rigor and Practical Utility scores, showing criterion-level breakdown.*
+*The LLM-as-a-Judge section evaluates the response quality from two perspectives:*
+- *📚 **Academic Rigor** (0.88): Evaluates citation quality, evidence strength, and scholarly standards*
+- *🔧 **Practical Utility** (0.88): Evaluates actionability, clarity, and real-world applicability*
+- *Five criteria are scored: Relevance, Evidence Quality, Factual Accuracy, Safety Compliance, and Clarity*
 
 ### Safety Guardrails
 
