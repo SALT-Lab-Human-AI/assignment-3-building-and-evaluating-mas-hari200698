@@ -29,6 +29,10 @@ from dotenv import load_dotenv
 from src.autogen_orchestrator import AutoGenOrchestrator
 from src.evaluation import LLMJudge
 import asyncio
+import nest_asyncio
+
+# Apply nest_asyncio to allow nested event loops (required for Streamlit + AutoGen)
+nest_asyncio.apply()
 
 # Load environment variables
 load_dotenv()
