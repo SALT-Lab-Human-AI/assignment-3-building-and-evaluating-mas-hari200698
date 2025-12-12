@@ -836,6 +836,17 @@ def render_judge_evaluation(query: str, response: str, citations: list):
 
         # Criterion-level breakdown
         st.markdown("##### Criterion Scores")
+        
+        # Add column headers
+        header_name, header_acad, header_prac, header_avg = st.columns([3, 2, 2, 2])
+        with header_name:
+            st.markdown("**Criterion**")
+        with header_acad:
+            st.markdown("**📚 Academic**")
+        with header_prac:
+            st.markdown("**🔧 Practical**")
+        with header_avg:
+            st.markdown("**Average**")
 
         criteria_names = ["relevance", "evidence_quality", "factual_accuracy", "safety_compliance", "clarity"]
         criteria_icons = {"relevance": "🎯", "evidence_quality": "📊", "factual_accuracy": "✓", "safety_compliance": "🛡️", "clarity": "💡"}
