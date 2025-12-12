@@ -879,10 +879,19 @@ def render_judge_evaluation(query: str, response: str, citations: list):
         if agreements or disagreements:
             st.markdown("---")
             st.markdown("##### Analysis")
+            
             if agreements:
-                st.success(f"✅ Perspectives agree on {len(agreements)} criteria")
+                agreement_names = [a.get("criterion", "").replace("_", " ").title() for a in agreements]
+                st.success(f"✅ **Perspectives agree on {len(agreements)} criteria:** {', '.join(agreement_names)}")
+            
             if disagreements:
-                st.warning(f"⚠️ Perspectives differ on {len(disagreements)} criteria")
+                disagreement_details = []
+                for d in disagreements:
+                    name = d.get("criterion", "").replace("_", " ").title()
+                    acad = d.get("academic", 0)
+                    prac = d.get("practical", 0)
+                    disagreement_details.append(f"{name} (📚{acad:.2f} vs 🔧{prac:.2f})")
+                st.warning(f"⚠️ **Perspectives differ on {len(disagreements)} criteria:** {', '.join(disagreement_details)}")
 
 
 def render_safety_log():
