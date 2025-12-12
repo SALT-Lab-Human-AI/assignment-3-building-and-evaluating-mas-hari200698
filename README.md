@@ -128,17 +128,33 @@ The following screenshots demonstrate the system:
 
 ![Judge Evaluation](samples/judge_evaluation.png)
 
-*Multi-perspective evaluation with Academic Rigor and Practical Utility scores.*
+*Multi-perspective evaluation with Academic Rigor and Practical Utility scores, showing criterion-level breakdown.*
 
 ### Safety Guardrails
 
+The system detects and blocks various types of unsafe input:
+
+#### Prompt Injection Detection
+
+![Prompt Injection Blocked](samples/safety_injection_example.png)
+
+*System detects and blocks prompt injection attempts ("Ignore all previous instructions...").*
+
+![Prompt Injection Details](samples/safety_injection_example_expanded.png)
+
+*Expanded safety log showing the specific violation detected and severity level.*
+
+#### Off-Topic Query Blocking
+
 ![Guardrail Block](samples/guardrail_blocked.png)
 
-*Example of a blocked malicious/off-topic query.*
+*Example of a blocked off-topic query that is not related to HCI research.*
+
+#### Safety Log
 
 ![Safety Log](samples/safety_log.png)
 
-*Safety Log showing detected violations.*
+*Safety Log showing all detected violations with timestamps and policy categories.*
 
 ### Sample Artifacts (in `samples/` directory)
 
