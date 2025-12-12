@@ -1,0 +1,105 @@
+{
+    "evaluation_id": "judge_sample_001",
+    "timestamp": "2024-12-10T10:35:00Z",
+    "query": "What are the key principles of user-centered design in HCI?",
+    "evaluation_type": "multi_perspective",
+    "perspectives": {
+        "academic": {
+            "system_prompt": "You are an academic reviewer evaluating research responses. Focus on: citation quality, evidence strength, factual accuracy, methodological soundness, and scholarly rigor. Be critical but fair. Provide scores based on academic standards.",
+            "overall_score": 0.78,
+            "criterion_scores": {
+                "relevance": {
+                    "score": 0.85,
+                    "reasoning": "The response directly addresses the query about UCD principles. It covers the main aspects requested and provides a comprehensive overview of the topic. The structure with numbered principles makes it easy to identify the key points."
+                },
+                "evidence_quality": {
+                    "score": 0.75,
+                    "reasoning": "The response cites foundational works (Norman & Draper, 1986) and includes both academic papers and practitioner resources. However, some citations lack complete bibliographic information, and more recent research (post-2010) could strengthen the evidence base."
+                },
+                "factual_accuracy": {
+                    "score": 0.80,
+                    "reasoning": "The information presented is accurate and aligns with established HCI literature. The principles described (early user focus, iterative design, empirical measurement, integrated design) are correctly attributed to the UCD methodology."
+                },
+                "safety_compliance": {
+                    "score": 0.90,
+                    "reasoning": "The response contains no harmful, biased, or inappropriate content. It is purely informational and educational in nature."
+                },
+                "clarity": {
+                    "score": 0.85,
+                    "reasoning": "The response is well-organized with clear headers, numbered points, and a logical flow from overview to specific principles to references. The language is accessible without being overly simplified."
+                }
+            }
+        },
+        "practical": {
+            "system_prompt": "You are a UX practitioner evaluating research responses for practical use. Focus on: actionable insights, clarity, real-world applicability, completeness, and whether the information helps solve actual problems. Be practical and results-oriented.",
+            "overall_score": 0.82,
+            "criterion_scores": {
+                "relevance": {
+                    "score": 0.88,
+                    "reasoning": "The response provides immediately useful information that a designer could apply. Each principle is explained with enough detail to understand how to implement it in practice."
+                },
+                "evidence_quality": {
+                    "score": 0.72,
+                    "reasoning": "While the academic sources are credible, a practitioner might benefit from more case studies or examples of UCD in action. The Nielsen Norman Group reference is particularly valuable for practical application."
+                },
+                "factual_accuracy": {
+                    "score": 0.82,
+                    "reasoning": "The principles described match industry-standard UCD practices. The information would be reliable for making design decisions."
+                },
+                "safety_compliance": {
+                    "score": 0.90,
+                    "reasoning": "Content is appropriate and professional. No concerns from a practical standpoint."
+                },
+                "clarity": {
+                    "score": 0.88,
+                    "reasoning": "Excellent organization and readability. A busy practitioner could quickly scan the headers to find relevant information. The numbered format is particularly helpful."
+                }
+            }
+        }
+    },
+    "combined_score": 0.80,
+    "analysis": {
+        "agreements": [
+            {
+                "criterion": "relevance",
+                "academic": 0.85,
+                "practical": 0.88
+            },
+            {
+                "criterion": "safety_compliance",
+                "academic": 0.90,
+                "practical": 0.90
+            },
+            {
+                "criterion": "clarity",
+                "academic": 0.85,
+                "practical": 0.88
+            }
+        ],
+        "disagreements": [
+            {
+                "criterion": "evidence_quality",
+                "academic": 0.75,
+                "practical": 0.72,
+                "difference": 0.03
+            }
+        ],
+        "perspective_correlation": 0.80
+    },
+    "raw_judge_prompts": {
+        "relevance_prompt": "Evaluate the following response for the criterion: **relevance**\n\n## Criterion Description\nHow relevant is the response to the query?\n\n## Scoring Rubric (0.0 to 1.0 scale)\n  0.0-0.2: Response is completely off-topic or unrelated to the query\n  0.2-0.4: Response partially addresses the query but misses key aspects\n  0.4-0.6: Response addresses the main query but lacks depth or completeness\n  0.6-0.8: Response thoroughly addresses the query with good coverage\n  0.8-1.0: Response perfectly addresses all aspects of the query comprehensively\n\n## Query\nWhat are the key principles of user-centered design in HCI?\n\n## Response to Evaluate\n[Full response text here]\n\n## Instructions\n1. Carefully read the response and evaluate it against the criterion\n2. Use the scoring rubric to determine an appropriate score\n3. Provide detailed reasoning for your score\n4. Be consistent and fair in your evaluation\n\n## Required Output Format (JSON)\nRespond ONLY with valid JSON in this exact format:\n```json\n{\n    \"score\": <float between 0.0 and 1.0>,\n    \"reasoning\": \"<detailed explanation of your score, referencing specific parts of the response>\"\n}\n```"
+    },
+    "interpretation": {
+        "summary": "The response demonstrates good quality across both academic and practical perspectives, with a combined score of 0.80. Both perspectives agree on the response's relevance, safety compliance, and clarity.",
+        "strengths": [
+            "Well-organized structure with clear headers",
+            "Appropriate use of foundational academic sources",
+            "Good balance between theory and practical applicability"
+        ],
+        "areas_for_improvement": [
+            "Could include more recent research citations",
+            "Would benefit from practical examples or case studies",
+            "Some citations could have more complete bibliographic information"
+        ]
+    }
+}
