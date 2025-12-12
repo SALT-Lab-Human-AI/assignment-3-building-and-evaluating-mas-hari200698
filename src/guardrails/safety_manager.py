@@ -19,7 +19,7 @@ from src.guardrails.output_guardrail import OutputGuardrail
 class SafetyManager:
     """
     Manages safety guardrails for the multi-agent system.
-    
+
     Coordinates input and output guardrails, logs safety events,
     and handles violations according to configured policies.
     """
@@ -52,14 +52,14 @@ class SafetyManager:
             "action": "refuse",
             "message": "I cannot process this request due to safety policies."
         })
-        
+
         # Safety log file path
         self.safety_log_file = config.get("safety_log_file")
-        
+
         # Initialize guardrails
         self.input_guardrail = InputGuardrail(config)
         self.output_guardrail = OutputGuardrail(config)
-        
+
         self.logger.info("SafetyManager initialized with input and output guardrails")
 
     def check_input_safety(self, query: str) -> Dict[str, Any]:
@@ -81,10 +81,10 @@ class SafetyManager:
 
         # Use InputGuardrail to validate
         result = self.input_guardrail.validate(query)
-        
+
         is_safe = result["valid"]
         violations = result["violations"]
-        
+
         # Log safety event if violations found
         if violations and self.log_events:
             self._log_safety_event("input", query, violations, is_safe)
@@ -94,7 +94,7 @@ class SafetyManager:
             "violations": violations,
             "sanitized_query": result.get("sanitized_input", query)
         }
-        
+
         # Add refusal message if not safe
         if not is_safe:
             action = self.on_violation.get("action", "refuse")
@@ -102,7 +102,7 @@ class SafetyManager:
                 response["message"] = self._get_refusal_message(violations)
             elif action == "redirect":
                 response["message"] = "Your query has been flagged. Please rephrase your question."
-        
+
         return response
 
     def check_output_safety(self, response: str, sources: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
@@ -124,10 +124,10 @@ class SafetyManager:
 
         # Use OutputGuardrail to validate
         result = self.output_guardrail.validate(response, sources)
-        
+
         is_safe = result["valid"]
         violations = result["violations"]
-        
+
         # Log safety event if violations found
         if violations and self.log_events:
             self._log_safety_event("output", response[:500], violations, is_safe)
@@ -155,31 +155,31 @@ class SafetyManager:
     def _get_refusal_message(self, violations: List[Dict[str, Any]]) -> str:
         """
         Generate an appropriate refusal message based on violations.
-        
+
         Args:
             violations: List of violations found
-            
+
         Returns:
             Human-readable refusal message
         """
         if not violations:
             return self.on_violation.get("message", "Request cannot be processed.")
-        
+
         # Check for specific violation types
         violation_types = [v.get("validator") for v in violations]
-        
+
         if "prompt_injection" in violation_types:
             return "Your request appears to contain prompt manipulation attempts. Please ask a legitimate research question."
-        
+
         if "toxic_language" in violation_types:
             return "Your request contains content that cannot be processed. Please rephrase your question appropriately."
-        
+
         if "length" in violation_types:
             return "Your request is either too short or too long. Please provide a clear research question."
-        
+
         if "relevance" in violation_types:
             return "This system is designed for research queries. Please ask a question related to research or academic topics."
-        
+
         return self.on_violation.get("message", "I cannot process this request due to safety policies.")
 
     def _log_safety_event(
@@ -209,7 +209,7 @@ class SafetyManager:
         }
 
         self.safety_events.append(event)
-        
+
         # Log to standard logger
         if is_safe:
             self.logger.info(f"Safety check passed: {event_type}")
@@ -226,10 +226,10 @@ class SafetyManager:
     def _get_severity_summary(self, violations: List[Dict[str, Any]]) -> Dict[str, int]:
         """
         Summarize violations by severity.
-        
+
         Args:
             violations: List of violations
-            
+
         Returns:
             Dictionary with count per severity level
         """
@@ -243,7 +243,7 @@ class SafetyManager:
     def _write_to_log_file(self, event: Dict[str, Any]):
         """
         Write safety event to log file.
-        
+
         Args:
             event: Safety event to log
         """
@@ -252,7 +252,7 @@ class SafetyManager:
             log_dir = os.path.dirname(self.safety_log_file)
             if log_dir and not os.path.exists(log_dir):
                 os.makedirs(log_dir, exist_ok=True)
-                
+
             with open(self.safety_log_file, "a") as f:
                 f.write(json.dumps(event) + "\n")
         except Exception as e:
@@ -273,13 +273,13 @@ class SafetyManager:
         input_events = sum(1 for e in self.safety_events if e["type"] == "input")
         output_events = sum(1 for e in self.safety_events if e["type"] == "output")
         violations = sum(1 for e in self.safety_events if not e["safe"])
-        
+
         # Count by severity
         high_severity = sum(
-            e.get("severity_summary", {}).get("high", 0) 
+            e.get("severity_summary", {}).get("high", 0)
             for e in self.safety_events
         )
-        
+
         return {
             "total_events": total,
             "input_checks": input_events,
@@ -298,11 +298,11 @@ class SafetyManager:
     def is_enabled(self) -> bool:
         """Check if safety manager is enabled."""
         return self.enabled
-    
+
     def get_guardrail_summary(self) -> Dict[str, Any]:
         """
         Get summary of all guardrail configurations.
-        
+
         Returns:
             Dictionary with guardrail summaries
         """

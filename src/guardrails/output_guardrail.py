@@ -17,7 +17,7 @@ import logging
 class OutputGuardrail:
     """
     Guardrail for checking output safety.
-    
+
     This class validates generated responses before they are
     returned to users, ensuring they don't contain unsafe content.
     """
@@ -31,7 +31,7 @@ class OutputGuardrail:
         """
         self.config = config
         self.logger = logging.getLogger("guardrails.output")
-        
+
         # PII patterns with regex
         self.pii_patterns = {
             "email": r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
@@ -41,30 +41,30 @@ class OutputGuardrail:
             "credit_card": r'\b(?:\d{4}[-\s]?){3}\d{4}\b',
             "ip_address": r'\b(?:\d{1,3}\.){3}\d{1,3}\b',
         }
-        
+
         # Compile patterns for efficiency
         self.compiled_pii_patterns = {
-            name: re.compile(pattern) 
+            name: re.compile(pattern)
             for name, pattern in self.pii_patterns.items()
         }
-        
+
         # Harmful content keywords in outputs
         self.harmful_output_keywords = [
             # Instructions for harm
             "how to hack", "how to steal", "how to attack",
             "step-by-step guide to", "instructions for creating",
-            
+
             # Dangerous information
             "bomb making", "weapon construction",
             "poison", "lethal dose",
-            
+
             # Discriminatory content
             "inferior race", "lesser humans",
-            
+
             # Inappropriate personal advice
             "you should hurt", "harm yourself",
         ]
-        
+
         # Bias indicators
         self.bias_indicators = [
             # Absolute statements without evidence
@@ -74,7 +74,7 @@ class OutputGuardrail:
             # Dismissive language
             r'\b(obviously|clearly|everyone knows)\b',
         ]
-        
+
         self.compiled_bias_patterns = [
             re.compile(pattern, re.IGNORECASE) for pattern in self.bias_indicators
         ]
@@ -94,30 +94,30 @@ class OutputGuardrail:
             - sanitized_output: cleaned response with PII redacted
         """
         violations = []
-        
+
         # Run all checks
         pii_violations = self._check_pii(response)
         violations.extend(pii_violations)
-        
+
         harmful_violations = self._check_harmful_content(response)
         violations.extend(harmful_violations)
-        
+
         bias_violations = self._check_bias(response)
         violations.extend(bias_violations)
-        
+
         if sources:
             citation_violations = self._check_citations(response, sources)
             violations.extend(citation_violations)
-        
+
         # Log violations if any
         if violations:
             self.logger.warning(f"Output validation found {len(violations)} violation(s)")
             for v in violations:
                 self.logger.warning(f"  - {v['validator']}: {v['reason']} (severity: {v['severity']})")
-        
+
         # Sanitize output (redact PII)
         sanitized = self._sanitize(response, violations)
-        
+
         return {
             "valid": len([v for v in violations if v["severity"] == "high"]) == 0,
             "violations": violations,
@@ -127,13 +127,13 @@ class OutputGuardrail:
     def _check_pii(self, text: str) -> List[Dict[str, Any]]:
         """
         Check for personally identifiable information.
-        
+
         Detects common PII patterns like emails, phone numbers,
         SSNs, credit card numbers, etc.
 
         Args:
             text: The response text to check
-            
+
         Returns:
             List of violations found
         """
@@ -144,7 +144,7 @@ class OutputGuardrail:
             if matches:
                 # Filter out common false positives
                 filtered_matches = self._filter_pii_false_positives(pii_type, matches)
-                
+
                 if filtered_matches:
                     violations.append({
                         "validator": "pii",
@@ -160,46 +160,46 @@ class OutputGuardrail:
     def _filter_pii_false_positives(self, pii_type: str, matches: List[str]) -> List[str]:
         """
         Filter out common false positives in PII detection.
-        
+
         Args:
             pii_type: Type of PII being checked
             matches: List of matches found
-            
+
         Returns:
             Filtered list of actual PII matches
         """
         filtered = []
-        
+
         for match in matches:
             # Skip example/placeholder values
             if pii_type == "email":
                 if any(x in match.lower() for x in ["example.com", "test.com", "domain.com", "@..."]):
                     continue
-                    
+
             if pii_type == "phone_us":
                 # Skip common placeholder patterns
                 if match in ["123-456-7890", "000-000-0000", "111-111-1111"]:
                     continue
-                    
+
             if pii_type == "ip_address":
                 # Skip localhost and common documentation IPs
                 if match in ["127.0.0.1", "0.0.0.0", "192.168.1.1", "10.0.0.1"]:
                     continue
-                    
+
             filtered.append(match)
-            
+
         return filtered
 
     def _check_harmful_content(self, text: str) -> List[Dict[str, Any]]:
         """
         Check for harmful or inappropriate content.
-        
+
         Detects content that could be dangerous or inappropriate
         to include in research responses.
 
         Args:
             text: The response text to check
-            
+
         Returns:
             List of violations found
         """
@@ -224,24 +224,24 @@ class OutputGuardrail:
     def _check_bias(self, text: str) -> List[Dict[str, Any]]:
         """
         Check for biased language.
-        
+
         Detects patterns that might indicate biased or
         discriminatory language in responses.
 
         Args:
             text: The response text to check
-            
+
         Returns:
             List of violations found
         """
         violations = []
-        
+
         bias_found = []
         for pattern in self.compiled_bias_patterns:
             matches = pattern.findall(text)
             if matches:
                 bias_found.extend(matches)
-        
+
         if bias_found:
             violations.append({
                 "validator": "bias",
@@ -255,19 +255,19 @@ class OutputGuardrail:
     def _check_citations(self, response: str, sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Check if response properly cites sources.
-        
+
         Verifies that claims in the response are supported by
         the provided sources.
 
         Args:
             response: The response text to check
             sources: List of sources used
-            
+
         Returns:
             List of violations found
         """
         violations = []
-        
+
         # Check if response has any citation indicators
         citation_patterns = [
             r'\[Source:',
@@ -278,12 +278,12 @@ class OutputGuardrail:
             r'et al\.',
             r'References?:',
         ]
-        
+
         has_citations = any(
-            re.search(pattern, response, re.IGNORECASE) 
+            re.search(pattern, response, re.IGNORECASE)
             for pattern in citation_patterns
         )
-        
+
         # If sources were provided but response has no citations
         if sources and len(sources) > 0 and not has_citations:
             violations.append({
@@ -292,7 +292,7 @@ class OutputGuardrail:
                 "severity": "low",
                 "sources_available": len(sources)
             })
-        
+
         return violations
 
     def _check_factual_consistency(
@@ -302,14 +302,14 @@ class OutputGuardrail:
     ) -> List[Dict[str, Any]]:
         """
         Check if response is consistent with sources.
-        
+
         Note: Full fact-checking would require LLM-based verification.
         This is a placeholder for future enhancement.
 
         Args:
             response: The response text to check
             sources: List of sources to verify against
-            
+
         Returns:
             List of violations found
         """
@@ -320,13 +320,13 @@ class OutputGuardrail:
     def _sanitize(self, text: str, violations: List[Dict[str, Any]]) -> str:
         """
         Sanitize text by redacting detected PII.
-        
+
         Replaces detected PII with [REDACTED] placeholders.
 
         Args:
             text: The response text to sanitize
             violations: List of violations (used to find PII matches)
-            
+
         Returns:
             Sanitized text
         """
@@ -345,7 +345,7 @@ class OutputGuardrail:
     def get_validation_summary(self) -> Dict[str, Any]:
         """
         Get a summary of the validation rules in place.
-        
+
         Returns:
             Dictionary describing the validation rules
         """

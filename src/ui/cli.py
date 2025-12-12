@@ -5,7 +5,7 @@ Interactive CLI for the multi-agent research system.
 Features:
 - Interactive query input
 - Agent trace display
-- Citation/source display  
+- Citation/source display
 - Safety event communication (blocked/sanitized)
 - Command support (help, quit, clear, stats)
 """
@@ -32,7 +32,7 @@ load_dotenv()
 class CLI:
     """
     Command-line interface for the research assistant.
-    
+
     Displays:
     - Agent traces showing workflow
     - Citations and sources
@@ -116,27 +116,27 @@ class CLI:
                 print("\n" + "=" * 70)
                 print("🔄 Processing your query through agents...")
                 print("=" * 70)
-                
+
                 try:
                     # Process through orchestrator
                     result = self.orchestrator.process_query(query)
                     self.query_count += 1
-                    
+
                     # Track safety events
                     safety_info = result.get("safety", {})
                     events = safety_info.get("events", [])
                     if events:
                         self.all_safety_events.extend(events)
                         self.safety_events_count = len(self.all_safety_events)
-                    
+
                     # Check if blocked
                     input_check = safety_info.get("input_check", {})
                     if input_check and not input_check.get("safe", True):
                         self.blocked_queries_count += 1
-                    
+
                     # Display result
                     self._display_result(result)
-                    
+
                 except Exception as e:
                     print(f"\n❌ Error processing query: {e}")
                     logging.exception("Error processing query")
@@ -204,7 +204,7 @@ class CLI:
         print("\n" + "-" * 50)
         print("🛡️ SAFETY EVENT LOG")
         print("-" * 50)
-        
+
         if not self.all_safety_events:
             print("  ✅ No safety events recorded in this session.")
         else:
@@ -212,7 +212,7 @@ class CLI:
                 event_type = event.get("type", "unknown")
                 timestamp = event.get("timestamp", "")
                 details = event.get("details", {})
-                
+
                 # Determine icon
                 if event_type == "input_blocked":
                     icon = "⛔"
@@ -222,49 +222,49 @@ class CLI:
                     icon = "✅"
                 else:
                     icon = "ℹ️"
-                
+
                 print(f"\n  {icon} Event {i}: {event_type}")
                 if timestamp:
                     print(f"     Time: {timestamp}")
-                
+
                 violations = details.get("violations", [])
                 if violations:
                     for v in violations:
                         print(f"     • {v.get('category', 'N/A')}: {v.get('reason', 'Unknown')}")
-        
+
         print("-" * 50)
 
     def _display_result(self, result: Dict[str, Any]):
         """Display query result with formatting and safety info."""
-        
+
         # Get safety information
         safety_info = result.get("safety", {})
         input_check = safety_info.get("input_check", {})
         output_check = safety_info.get("output_check", {})
-        
+
         # Check if query was blocked
         if input_check and not input_check.get("safe", True):
             self._display_blocked_query(result, input_check)
             return
-        
+
         # Display main response
         print("\n" + "=" * 70)
         print("📄 RESPONSE")
         print("=" * 70)
-        
+
         # Check for errors
         if "error" in result and result.get("metadata", {}).get("error"):
             print(f"\n❌ Error: {result['error']}")
             return
-        
+
         # Display response
         response = result.get("response", "")
         print(f"\n{response}\n")
-        
+
         # Check if output was sanitized
         if output_check and not output_check.get("safe", True):
             self._display_sanitization_warning(output_check)
-        
+
         # Display citations
         citations = self._extract_citations(result)
         if citations:
@@ -273,7 +273,7 @@ class CLI:
             print("-" * 70)
             for i, citation in enumerate(citations, 1):
                 print(f"  [{i}] {citation}")
-        
+
         # Display metadata
         metadata = result.get("metadata", {})
         if metadata:
@@ -284,71 +284,71 @@ class CLI:
             print(f"  • Sources gathered:   {metadata.get('num_sources', 0)}")
             agents = metadata.get('agents_involved', [])
             print(f"  • Agents involved:    {', '.join(agents) if agents else 'N/A'}")
-        
+
         # Display agent traces
         if self._should_show_traces():
             self._display_agent_traces(result.get("conversation_history", []))
-        
+
         # Display safety summary
         self._display_safety_summary(safety_info)
-        
+
         print("=" * 70 + "\n")
-    
+
     def _display_blocked_query(self, result: Dict[str, Any], input_check: Dict[str, Any]):
         """Display blocked query message."""
         print("\n" + "=" * 70)
         print("⛔ QUERY BLOCKED BY SAFETY GUARDRAILS")
         print("=" * 70)
-        
+
         violations = input_check.get("violations", [])
         print("\n🚫 Your query was blocked for the following reasons:\n")
-        
+
         for i, v in enumerate(violations, 1):
             category = v.get("category", "safety").upper()
             reason = v.get("reason", "Unknown violation")
             print(f"  {i}. [{category}] {reason}")
-        
+
         print("\n" + "-" * 70)
         print("💡 Please rephrase your query to avoid:")
         print("   • Harmful or offensive content")
         print("   • Prompt injection attempts")
         print("   • Off-topic requests")
         print("-" * 70)
-        
+
         # Show the response message
         response = result.get("response", "Query blocked due to safety policies.")
         print(f"\n📝 {response}")
-        
+
         print("=" * 70 + "\n")
-    
+
     def _display_sanitization_warning(self, output_check: Dict[str, Any]):
         """Display warning about sanitized output."""
         print("\n" + "-" * 70)
         print("⚠️ OUTPUT SANITIZED BY SAFETY GUARDRAILS")
         print("-" * 70)
-        
+
         violations = output_check.get("violations", [])
         print("The response was modified for the following reasons:\n")
-        
+
         for v in violations:
             category = v.get("category", "safety").upper()
             reason = v.get("reason", "Unknown modification")
             print(f"  ✂️ [{category}] {reason}")
-        
+
         print("-" * 70)
-    
+
     def _display_safety_summary(self, safety_info: Dict[str, Any]):
         """Display a brief safety summary."""
         events = safety_info.get("events", [])
-        
+
         if events:
             print("\n" + "-" * 70)
             print("🛡️ SAFETY CHECK SUMMARY")
             print("-" * 70)
-            
+
             for event in events:
                 event_type = event.get("type", "unknown")
-                
+
                 if event_type == "input_validated":
                     print("  ✅ Input: Validated")
                 elif event_type == "input_blocked":
@@ -359,35 +359,35 @@ class CLI:
                     print("  ✂️ Output: Sanitized")
                 else:
                     print(f"  ℹ️ {event_type}")
-    
+
     def _extract_citations(self, result: Dict[str, Any]) -> list:
         """Extract citations/URLs from conversation history."""
         citations = []
         import re
-        
+
         for msg in result.get("conversation_history", []):
             content = msg.get("content", "")
-            
+
             # Handle case where content might be a list or other type
             if isinstance(content, list):
                 content = " ".join(str(item) for item in content)
             elif not isinstance(content, str):
                 content = str(content)
-            
+
             # Find URLs
             urls = re.findall(r'https?://[^\s<>"{}|\\^`\[\]]+', content)
-            
+
             # Find [Source: ...] patterns
             sources = re.findall(r'\[Source: ([^\]]+)\]', content)
-            
+
             for url in urls:
                 if url not in citations:
                     citations.append(url)
-            
+
             for source in sources:
                 if source not in citations:
                     citations.append(source)
-        
+
         return citations[:15]  # Limit to 15
 
     def _should_show_traces(self) -> bool:
@@ -398,11 +398,11 @@ class CLI:
         """Display agent workflow traces."""
         if not conversation_history:
             return
-        
+
         print("\n" + "-" * 70)
         print("🔍 AGENT WORKFLOW TRACES")
         print("-" * 70)
-        
+
         # Agent color/emoji mapping
         agent_icons = {
             "Planner": "🟦",
@@ -411,17 +411,17 @@ class CLI:
             "Critic": "🟪",
             "user": "⬜"
         }
-        
+
         for i, msg in enumerate(conversation_history, 1):
             agent = msg.get("source", "Unknown")
             content = msg.get("content", "")
-            
+
             icon = agent_icons.get(agent, "⬛")
-            
+
             # Truncate long content
             preview = content[:200] + "..." if len(content) > 200 else content
             preview = preview.replace("\n", " ")
-            
+
             print(f"\n  Step {i}: {icon} {agent}")
             print(f"  {'-' * 40}")
             print(f"  {preview}")

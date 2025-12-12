@@ -42,7 +42,7 @@ def create_research_team(config: Dict[str, Any]) -> RoundRobinGroupChat:
     researcher = create_researcher_agent(config, model_client)
     writer = create_writer_agent(config, model_client)
     critic = create_critic_agent(config, model_client)
-    
+
     team = RoundRobinGroupChat(
         participants=[planner, researcher, writer, critic],
         termination_condition=termination,
@@ -77,7 +77,7 @@ def create_research_team(config: Dict[str, Any]) -> RoundRobinGroupChat:
   - Supports Tavily API (free tier available)
   - Supports Brave Search API
   - Returns formatted results with titles, URLs, snippets
-  
+
 - **Paper Search Tool** (`src/tools/paper_search.py`):
   - Integrates Semantic Scholar API
   - Returns papers with authors, abstracts, citations
@@ -289,7 +289,7 @@ event = {
   - **2 Independent Judging Prompts:**
     1. **Academic Perspective** - Evaluates research rigor, citations, accuracy
     2. **Practical Perspective** - Evaluates usefulness, clarity, actionability
-  
+
 - **Multi-Perspective Evaluation:**
   - `evaluate_multi_perspective()` method combines both perspectives
   - Identifies agreements and disagreements
