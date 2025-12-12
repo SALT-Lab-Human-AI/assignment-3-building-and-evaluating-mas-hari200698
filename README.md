@@ -127,6 +127,12 @@ This query triggers the full multi-agent pipeline: Planner creates a research st
 - *🔧 **Tool Calls**: Number of web/paper search API calls made*
 - *👥 **Agents**: The 4 agents involved (Planner, Researcher, Writer, Critic)*
 
+### Citations & Sources
+
+![Citations & Sources](samples/citations_sources.png)
+
+*The Citations & Sources section displays all references gathered by the Researcher agent. Each source is a clickable link to the original article, paper, or documentation. In this example, 15 sources were collected including articles from Medium, CMSWire, and various tech blogs about AI prototyping tools.*
+
 ### Agent Processing Log
 
 ![Agent Traces - Collapsed](samples/agent_traces_1.png)
